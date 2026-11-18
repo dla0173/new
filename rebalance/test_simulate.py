@@ -75,7 +75,8 @@ class SimulateTest(unittest.TestCase):
 
     def test_rejects_invalid_cost_and_initial(self):
         s = Strategy("h", "none")
-        for kwargs in ({"cost_bp": -1}, {"cost_bp": 10_000}, {"initial_value": 0}):
+        for kwargs in ({"cost_bp": -1}, {"cost_bp": 10_000}, {"cost_bp": float("nan")},
+            {"initial_value": 0}, {"initial_value": float("nan")}, {"initial_value": float("inf")},):
             with self.assertRaises(ValueError):
                 simulate(self.returns, self.w, s, **kwargs)
 

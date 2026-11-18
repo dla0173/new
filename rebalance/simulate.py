@@ -107,8 +107,8 @@ def simulate(
         )
     if not 0 <= cost_bp < 10_000:
         raise ValueError(f"거래비용은 0bp 이상 10,000bp 미만이어야 합니다: {cost_bp}")
-    if initial_value <= 0:
-        raise ValueError("초기 투자금은 0보다 커야 합니다.")
+    if not (np.isfinite(initial_value) and initial_value > 0):
+        raise ValueError(f"초기 투자금은 0보다 큰 유한한 값이어야 합니다: {initial_value}")
     cost_rate = cost_bp / 10_000
 
     # 최초 매수 (현금 → 목표 비중)
