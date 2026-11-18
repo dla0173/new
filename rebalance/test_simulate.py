@@ -59,6 +59,26 @@ class SimulateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             simulate(self.returns, {"주식": 0.5, "현금": 0.5}, Strategy("h", "none"))
 
+    def test_rejects_returns_at_or_below_minus_100pct(self):
+        s = Strategy("m", "periodic", period_months=1)
+        for bad in (-1.0, -1.5):
+            rets = self.returns.copy()
+            rets.iloc[1, 0] = bad
+            with self.assertRaisesRegex(ValueError, "-100%"):
+                simulate(rets, self.w, s, initial_value=100)
+
+    def test_rejects_infinite_returns(self):
+        rets = self.returns.copy()
+        rets.iloc[1, 0] = np.inf
+        with self.assertRaises(ValueError):
+            simulate(rets, self.w, Strategy("h", "none"), initial_value=100)
+
+    def test_rejects_invalid_cost_and_initial(self):
+        s = Strategy("h", "none")
+        for kwargs in ({"cost_bp": -1}, {"cost_bp": 10_000}, {"initial_value": 0}):
+            with self.assertRaises(ValueError):
+                simulate(self.returns, self.w, s, **kwargs)
+
     def test_parse_weights_percent(self):
         self.assertEqual(parse_weights("주식=60,채권=40"), {"주식": 0.6, "채권": 0.4})
         self.assertEqual(parse_weights("주식=0.6,채권=0.4"), {"주식": 0.6, "채권": 0.4})

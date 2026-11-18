@@ -96,6 +96,19 @@ def simulate(
     rets = returns[assets].astype(float)
     if rets.isna().any().any():
         raise ValueError("수익률 데이터에 결측치가 있습니다.")
+    if not np.isfinite(rets.to_numpy()).all():
+        raise ValueError("수익률 데이터에 무한대 값이 있습니다. (가격 0 포함 여부를 확인하세요)")
+    bad = rets.le(-1.0)
+    if bad.any().any():
+        date, asset = bad.stack().loc[lambda s: s].index[0]
+        raise ValueError(
+            f"{date} {asset}: 월 수익률 {rets.at[date, asset]:.2%} — -100% 이하 수익률은 "
+            "자산 가치가 0 이하가 되므로 허용하지 않습니다. (소수 단위 입력인지 확인하세요: 0.01 = 1%)"
+        )
+    if not 0 <= cost_bp < 10_000:
+        raise ValueError(f"거래비용은 0bp 이상 10,000bp 미만이어야 합니다: {cost_bp}")
+    if initial_value <= 0:
+        raise ValueError("초기 투자금은 0보다 커야 합니다.")
     cost_rate = cost_bp / 10_000
 
     # 최초 매수 (현금 → 목표 비중)
@@ -216,6 +229,8 @@ def load_csv(path: str, kind: str) -> pd.DataFrame:
     """CSV 로드. 첫 열은 날짜. kind='prices' 면 가격을 월별 수익률로 변환."""
     df = pd.read_csv(path, index_col=0, parse_dates=True).sort_index()
     if kind == "prices":
+        if (df <= 0).any().any():
+            raise ValueError("가격 데이터에 0 이하 값이 있습니다.")
         df = df.pct_change().iloc[1:]
     elif kind == "returns":
         pass
@@ -293,4 +308,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except ValueError as e:
+        print(f"입력 오류: {e}", file=sys.stderr)
+        sys.exit(2)
